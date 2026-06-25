@@ -442,12 +442,13 @@ const html = `<!doctype html>
 
     .table-shell {
       border: 1px solid rgba(139, 93, 55, 0.14);
-      border-radius: 16px;
+      border-radius: 22px;
       overflow-x: auto;
       overflow-y: auto;
       scrollbar-gutter: stable both-edges;
       max-width: 100%;
       background: var(--panel-strong);
+      padding: 10px;
     }
 
     .table-scroll-hint {
@@ -457,20 +458,22 @@ const html = `<!doctype html>
     }
 
     table {
-      width: max-content;
-      min-width: 1480px;
-      border-collapse: collapse;
+      width: 100%;
+      min-width: 1100px;
+      border-collapse: separate;
+      border-spacing: 0 12px;
+      table-layout: fixed;
     }
 
     thead th {
       text-align: left;
-      background: #f4e5d6;
+      background: #f7eadc;
       color: var(--accent-deep);
-      padding: 13px 14px;
-      font-size: 0.78rem;
+      padding: 12px 16px;
+      font-size: 0.75rem;
       text-transform: uppercase;
-      letter-spacing: 0.07em;
-      border-bottom: 1px solid rgba(139, 93, 55, 0.18);
+      letter-spacing: 0.08em;
+      border-bottom: none;
       position: sticky;
       top: 0;
       z-index: 1;
@@ -478,19 +481,19 @@ const html = `<!doctype html>
 
     tbody td {
       vertical-align: top;
-      padding: 14px;
-      border-bottom: 1px solid rgba(139, 93, 55, 0.1);
+      padding: 0;
+      border-bottom: none;
       font-size: 0.95rem;
-      line-height: 1.45;
+      line-height: 1.55;
     }
 
     tbody tr:hover {
-      background: rgba(250, 241, 231, 0.72);
+      background: transparent;
     }
 
     tbody tr.is-selected {
-      background: linear-gradient(90deg, rgba(242, 216, 196, 0.94), rgba(255, 249, 242, 0.98));
-      box-shadow: inset 5px 0 0 var(--accent);
+      background: transparent;
+      box-shadow: none;
     }
 
     tbody tr.select-row {
@@ -498,22 +501,22 @@ const html = `<!doctype html>
     }
 
     .book {
-      min-width: 280px;
+      width: 24%;
     }
 
     thead th:nth-child(2),
     tbody td:nth-child(2) {
-      min-width: 260px;
+      width: 24%;
     }
 
     thead th:nth-child(3),
     tbody td:nth-child(3) {
-      min-width: 260px;
+      width: 26%;
     }
 
     thead th:nth-child(4),
     tbody td:nth-child(4) {
-      min-width: 280px;
+      width: 26%;
     }
 
     thead th:nth-child(5),
@@ -529,37 +532,68 @@ const html = `<!doctype html>
     .book-title {
       display: block;
       font-weight: 700;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
       color: var(--accent-deep);
+      font-size: 1.05rem;
+      line-height: 1.3;
     }
 
     .book-meta {
       display: block;
       color: var(--muted);
-      font-size: 0.85rem;
+      font-size: 0.88rem;
     }
 
     .book-summary,
     .cell-detail {
       display: block;
-      margin-top: 8px;
+      margin-top: 10px;
       color: var(--muted);
-      font-size: 0.88rem;
-      line-height: 1.45;
+      font-size: 0.9rem;
+      line-height: 1.55;
+      word-break: break-word;
     }
 
     .cell-title {
       display: block;
       font-weight: 700;
       color: var(--accent-deep);
-      margin-bottom: 4px;
+      margin-bottom: 8px;
+      font-size: 1rem;
+      line-height: 1.35;
     }
 
     .cell-subtitle {
       display: block;
       color: var(--muted);
-      font-size: 0.84rem;
-      margin-bottom: 8px;
+      font-size: 0.87rem;
+      margin-bottom: 10px;
+      line-height: 1.45;
+    }
+
+    .cell-kicker {
+      display: inline-block;
+      margin-bottom: 10px;
+      color: var(--accent);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-weight: 700;
+    }
+
+    .cell-card {
+      height: 100%;
+      background: linear-gradient(180deg, rgba(255,253,249,0.98), rgba(250,242,233,0.92));
+      border: 1px solid rgba(139, 93, 55, 0.12);
+      border-radius: 18px;
+      padding: 18px 18px 16px;
+      box-shadow: 0 10px 26px rgba(84, 49, 23, 0.06);
+    }
+
+    tbody tr.is-selected .cell-card {
+      border-color: rgba(142, 75, 34, 0.4);
+      box-shadow: 0 14px 32px rgba(142, 75, 34, 0.12);
+      background: linear-gradient(180deg, rgba(255,249,242,1), rgba(247,232,218,0.95));
     }
 
     .pill {
@@ -1236,27 +1270,39 @@ const html = `<!doctype html>
         ].filter(Boolean).map((value) => \`<span class="pill">\${escapeHtml(value)}</span>\`).join("");
         const sourceLine = row.relative_path || row.file_path;
 
-        return \`
-          <tr class="\${rowClass}" data-select-row="\${escapeHtml(key)}">
-            <td class="book">
-              <span class="book-title">\${escapeHtml(row.title)}</span>
-              <span class="book-meta">\${escapeHtml(row.author)}</span>
-              <div>\${bookPills}</div>
-              <span class="book-summary">\${escapeHtml(row.book_theme || "No book theme summary yet.")}</span>
-            </td>
-            <td>
-              <span class="cell-title">\${escapeHtml(row.chapter)}</span>
-              <span class="cell-subtitle">\${escapeHtml(row.chapter_theme || "No chapter theme summary yet.")}</span>
-              <span class="cell-detail">\${escapeHtml(sourceLine)}</span>
-            </td>
-            <td>
-              <span class="cell-title">\${escapeHtml(row.what_this_chapter_teaches || "No teaching notes yet.")}</span>
-              <span class="cell-detail">Theme: \${escapeHtml(row.chapter_theme || "Not specified")}</span>
-            </td>
-            <td>
-              <span class="cell-title">\${escapeHtml(row.what_weakness_it_solves || "No weakness summary yet.")}</span>
-              <span class="cell-detail">Entry: \${escapeHtml(row.chapter === "Whole Book Overview" ? "Whole-book overview" : "Chapter-specific extraction row")}</span>
-            </td>
+          return \`
+            <tr class="\${rowClass}" data-select-row="\${escapeHtml(key)}">
+              <td class="book">
+                <div class="cell-card">
+                  <span class="cell-kicker">Book</span>
+                  <span class="book-title">\${escapeHtml(row.title)}</span>
+                  <span class="book-meta">\${escapeHtml(row.author)}</span>
+                  <div>\${bookPills}</div>
+                  <span class="book-summary">\${escapeHtml(row.book_theme || "No book theme summary yet.")}</span>
+                </div>
+              </td>
+              <td>
+                <div class="cell-card">
+                  <span class="cell-kicker">Chapter</span>
+                  <span class="cell-title">\${escapeHtml(row.chapter)}</span>
+                  <span class="cell-subtitle">\${escapeHtml(row.chapter_theme || "No chapter theme summary yet.")}</span>
+                  <span class="cell-detail">\${escapeHtml(sourceLine)}</span>
+                </div>
+              </td>
+              <td>
+                <div class="cell-card">
+                  <span class="cell-kicker">Teaches</span>
+                  <span class="cell-title">\${escapeHtml(row.what_this_chapter_teaches || "No teaching notes yet.")}</span>
+                  <span class="cell-detail">Theme: \${escapeHtml(row.chapter_theme || "Not specified")}</span>
+                </div>
+              </td>
+              <td>
+                <div class="cell-card">
+                  <span class="cell-kicker">Weakness Solved</span>
+                  <span class="cell-title">\${escapeHtml(row.what_weakness_it_solves || "No weakness summary yet.")}</span>
+                  <span class="cell-detail">Entry: \${escapeHtml(row.chapter === "Whole Book Overview" ? "Whole-book overview" : "Chapter-specific extraction row")}</span>
+                </div>
+              </td>
             <td class="row-actions">
               <div class="tiny-actions">
                 <button class="tiny pick" type="button" data-select-button="\${escapeHtml(key)}">Pick</button>
