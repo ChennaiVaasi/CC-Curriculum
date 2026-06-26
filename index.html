@@ -927,18 +927,7 @@
             <button class="primary" id="copySummary" type="button">Copy Summary</button>
           </div>
           <div class="actions" style="margin-top:10px;">
-            <button class="ghost" id="openUploadModal" type="button" style="width:100%;">&#8593; Upload PDF to ChatPDF</button>
-          </div>
-          <div class="apikey-bar" id="apikeyBar">
-            <div class="field">
-              <label for="chatpdfApiKey">ChatPDF API Key</label>
-              <input id="chatpdfApiKey" type="password" placeholder="sec_xxxxxxxxxxxxxxxx" autocomplete="off">
-            </div>
-            <div style="display:flex;gap:8px;align-items:center;">
-              <button class="ghost" id="saveApiKey" type="button" style="padding:7px 14px;font-size:0.86rem;">Save Key</button>
-              <button class="ghost" id="clearApiKey" type="button" style="padding:7px 14px;font-size:0.86rem;">Clear</button>
-              <span class="apikey-status" id="apikeyStatus"></span>
-            </div>
+            <button class="ghost" id="openUploadModal" type="button" style="width:100%;">&#8593; Upload PDFs to ChatPDF</button>
           </div>
         </aside>
       </div>
@@ -1047,25 +1036,17 @@
         <button class="close-modal-btn" id="closeUploadModal" type="button">✕ Close</button>
       </div>
 
-      <div class="pdf-drop-zone" id="pdfDropZone" tabindex="0" role="button" aria-label="Click to choose a PDF file">
-        <div class="pdf-drop-icon">📄</div>
-        <div class="pdf-drop-label">Click to choose a PDF</div>
-        <div class="pdf-drop-hint">or drag and drop here — PDF files only</div>
+      <div class="pdf-drop-zone" id="pdfDropZone" tabindex="0" role="button" aria-label="Click to choose PDF files">
+        <div class="pdf-drop-icon">📚</div>
+        <div class="pdf-drop-label">Click to choose PDFs</div>
+        <div class="pdf-drop-hint">Multiple files supported — drag and drop here</div>
         <div class="pdf-chosen-name" id="pdfFileName"></div>
       </div>
-      <input type="file" id="pdfFileInput" accept=".pdf,application/pdf">
+      <input type="file" id="pdfFileInput" accept=".pdf,application/pdf" multiple>
 
       <div class="upload-modal-fields">
-        <div class="field full">
-          <label for="pdfBookTitle">Book Title</label>
-          <input id="pdfBookTitle" type="text" placeholder="e.g. My Chess Endgame Fundamentals">
-        </div>
-        <div class="field full">
-          <label for="pdfBookAuthor">Author</label>
-          <input id="pdfBookAuthor" type="text" placeholder="e.g. John Nunn">
-        </div>
         <div class="field">
-          <label for="pdfBookLevel">Level</label>
+          <label for="pdfBookLevel">Default Level</label>
           <select id="pdfBookLevel">
             <option value="All Ratings">All Ratings</option>
             <option value="U1400">U1400 (Beginner)</option>
@@ -1074,7 +1055,7 @@
           </select>
         </div>
         <div class="field">
-          <label for="pdfBookSkill">Skill Focus</label>
+          <label for="pdfBookSkill">Default Skill Focus</label>
           <select id="pdfBookSkill">
             <option value="General Chess Improvement">General Chess Improvement</option>
             <option value="Tactics Training">Tactics Training</option>
@@ -1088,12 +1069,20 @@
         </div>
       </div>
 
-      <div class="upload-step-btns">
-        <button class="ghost" id="extractOutlineBtn" type="button" disabled>Extract Chapters from Outline</button>
-        <button class="primary" id="uploadToChatpdfBtn" type="button" disabled>Upload to ChatPDF</button>
+      <div id="batchQueueSection" hidden>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="color:var(--accent-deep);font-size:0.88rem;text-transform:uppercase;letter-spacing:0.06em;" id="batchQueueLabel">Queue</span>
+          <span style="color:var(--muted);font-size:0.86rem;" id="batchQueueCount"></span>
+        </div>
+        <div id="batchQueueList" class="chapter-extract-list" style="max-height:220px;"></div>
       </div>
 
       <div class="upload-progress" id="uploadProgress"></div>
+
+      <div class="upload-step-btns" id="uploadStepBtns" hidden>
+        <button class="ghost" id="extractAllOutlinesBtn" type="button">Extract All Outlines</button>
+        <button class="primary" id="uploadAllBtn" type="button">Upload All to ChatPDF</button>
+      </div>
 
       <div id="chapterExtractList" class="chapter-extract-list" hidden></div>
 
@@ -1753,136 +1742,6 @@
     updateStudio();
     render();
 
-    // ── ChatPDF API key ───────────────────────────────────────────────────────
-    const chatpdfApiKeyInput = document.getElementById("chatpdfApiKey");
-    const apikeyStatus = document.getElementById("apikeyStatus");
-
-    function getChatPdfKey() {
-      return localStorage.getItem("chatpdf_api_key") || "";
-    }
-
-    function refreshKeyStatus() {
-      const key = getChatPdfKey();
-      if (key) {
-        chatpdfApiKeyInput.value = key;
-        apikeyStatus.textContent = "Key saved ✓";
-        apikeyStatus.className = "apikey-status ok";
-      } else {
-        apikeyStatus.textContent = "No key saved";
-        apikeyStatus.className = "apikey-status";
-      }
-    }
-
-    document.getElementById("saveApiKey").addEventListener("click", () => {
-      const val = chatpdfApiKeyInput.value.trim();
-      if (!val) { apikeyStatus.textContent = "Enter a key first"; apikeyStatus.className = "apikey-status"; return; }
-      localStorage.setItem("chatpdf_api_key", val);
-      refreshKeyStatus();
-    });
-
-    document.getElementById("clearApiKey").addEventListener("click", () => {
-      localStorage.removeItem("chatpdf_api_key");
-      chatpdfApiKeyInput.value = "";
-      refreshKeyStatus();
-    });
-
-    refreshKeyStatus();
-
-    // ── ChatPDF direct API calls ──────────────────────────────────────────────
-    async function chatpdfRequest(endpoint, options) {
-      const key = getChatPdfKey();
-      if (!key) throw new Error("No ChatPDF API key saved. Enter your key in the sidebar.");
-      const response = await fetch("https://api.chatpdf.com" + endpoint, {
-        ...options,
-        headers: { "x-api-key": key, ...(options.headers || {}) }
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || data.error || "ChatPDF request failed.");
-      return data;
-    }
-
-    async function uploadFileToChatPdf(file) {
-      const key = getChatPdfKey();
-      if (!key) throw new Error("No ChatPDF API key saved. Enter your key in the sidebar.");
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch("https://api.chatpdf.com/v1/sources/add-file", {
-        method: "POST",
-        headers: { "x-api-key": key },
-        body: formData
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.message || data.error || "ChatPDF upload failed.");
-      return data.sourceId;
-    }
-
-    // ── Update askChapter to call ChatPDF directly ────────────────────────────
-    // Override the askChapter function defined above to use ChatPDF API directly
-    askChapterButton.removeEventListener("click", askChapter);
-    askChapterButton.addEventListener("click", askChapterDirect);
-
-    async function askChapterDirect() {
-      const questionText = chapterQuestion.value.trim();
-      if (!selectedChapter) {
-        resultsMeta.textContent = "Select a chapter row first.";
-        renderSystemMessage("Select a catalog row before asking ChatPDF.");
-        return;
-      }
-      if (!questionText) {
-        resultsMeta.textContent = "Enter a question before asking.";
-        return;
-      }
-      const key = getChatPdfKey();
-      if (!key) {
-        renderSystemMessage("No ChatPDF API key found. Save your key in the sidebar first.");
-        return;
-      }
-      if (!selectedChapter.chatPdfSourceId) {
-        renderSystemMessage("No ChatPDF source linked to this chapter. Upload the PDF using the Upload button to get a source ID.");
-        return;
-      }
-
-      chatMessages.push({ role: "user", content: questionText });
-      chapterQuestion.value = "";
-      chatLoading = true;
-      askChapterButton.disabled = true;
-      askChapterButton.textContent = "Asking…";
-      renderChatHistory(true);
-
-      try {
-        const contextParts = [];
-        if (includeFenCheckbox.checked && fenContextInput.value.trim()) {
-          contextParts.push("FEN position: " + fenContextInput.value.trim());
-        }
-        if (includePgnCheckbox.checked && pgnContextInput.value.trim()) {
-          contextParts.push("PGN:\n" + pgnContextInput.value.trim());
-        }
-        const fullQuestion = contextParts.length
-          ? contextParts.join("\n\n") + "\n\n" + questionText
-          : questionText;
-
-        const messages = chatMessages.slice(0, -1).map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content }));
-        messages.push({ role: "user", content: fullQuestion });
-
-        const data = await chatpdfRequest("/v1/chats/message", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sourceId: selectedChapter.chatPdfSourceId, messages })
-        });
-
-        chatMessages.push({ role: "assistant", content: data.content || "ChatPDF returned an empty answer." });
-        resultsMeta.textContent = "ChatPDF answer received.";
-      } catch (error) {
-        chatMessages.push({ role: "assistant", content: (error && error.message) ? error.message : "ChatPDF request failed." });
-        resultsMeta.textContent = "ChatPDF request failed.";
-      } finally {
-        chatLoading = false;
-        askChapterButton.disabled = false;
-        askChapterButton.textContent = "Ask Chapter";
-        renderChatHistory();
-      }
-    }
-
     // ── PDF outline inference helpers ─────────────────────────────────────────
     function normalizeSentence(text) {
       const cleaned = String(text ?? "").replace(/\s+/g, " ").trim();
@@ -1931,14 +1790,12 @@
     }
 
     async function extractPdfOutline(file) {
-      if (typeof pdfjsLib === "undefined") throw new Error("PDF.js not loaded.");
+      if (typeof pdfjsLib === "undefined") return [];
       pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";
       const arrayBuffer = await file.arrayBuffer();
-      const data = new Uint8Array(arrayBuffer);
-      const doc = await pdfjsLib.getDocument({ data }).promise;
+      const doc = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
       const outline = await doc.getOutline();
       if (!outline || !outline.length) return [];
-
       const titles = [];
       function walk(items) {
         for (const item of items) {
@@ -1948,222 +1805,249 @@
         }
       }
       walk(outline);
-
-      const chessKeywords = /chapter|part|lesson|section|opening|endgame|tactic|strategy|game|attack|defence|defense|pawn|bishop|rook|knight|queen|king|combination|calculation|training|principle|principles|repertoire|method|course|school|study|pin|fork|mate|middle|sacrifice|exchange|positional|structure/i;
-      const filtered = titles.filter((t) => chessKeywords.test(t));
+      const chessRx = /chapter|part|lesson|section|opening|endgame|tactic|strategy|game|attack|defence|defense|pawn|bishop|rook|knight|queen|king|combination|calculation|training|principle|repertoire|method|course|school|study|pin|fork|mate|sacrifice|exchange|positional|structure/i;
+      const filtered = titles.filter((t) => chessRx.test(t));
       const unique = [...new Set(filtered.length >= 2 ? filtered : titles)];
       return unique.slice(0, 100);
     }
 
-    // ── Upload modal logic ────────────────────────────────────────────────────
+    // ── Upload modal — batch queue state ──────────────────────────────────────
+    // Each entry: { file, bookTitle, sourceId, chapters, status, error }
+    // status: "pending" | "extracting" | "uploading" | "done" | "error"
+    let batchQueue = [];
+
     const uploadModalOverlay = document.getElementById("uploadModalOverlay");
     const pdfDropZone = document.getElementById("pdfDropZone");
     const pdfFileInput = document.getElementById("pdfFileInput");
     const pdfFileName = document.getElementById("pdfFileName");
-    const extractOutlineBtn = document.getElementById("extractOutlineBtn");
-    const uploadToChatpdfBtn = document.getElementById("uploadToChatpdfBtn");
     const uploadProgress = document.getElementById("uploadProgress");
     const chapterExtractList = document.getElementById("chapterExtractList");
     const uploadModalActions = document.getElementById("uploadModalActions");
-    const pdfBookTitle = document.getElementById("pdfBookTitle");
-    const pdfBookAuthor = document.getElementById("pdfBookAuthor");
     const pdfBookLevel = document.getElementById("pdfBookLevel");
     const pdfBookSkill = document.getElementById("pdfBookSkill");
+    const batchQueueSection = document.getElementById("batchQueueSection");
+    const batchQueueList = document.getElementById("batchQueueList");
+    const batchQueueCount = document.getElementById("batchQueueCount");
+    const uploadStepBtns = document.getElementById("uploadStepBtns");
 
-    let currentPdfFile = null;
-    let currentSourceId = "";
-    let extractedChapters = [];
+    let allExtractedChapters = [];
 
-    function showUploadProgress(msg, type = "") {
+    function showProgress(msg, type = "") {
       uploadProgress.textContent = msg;
       uploadProgress.className = "upload-progress visible" + (type ? " " + type : "");
     }
+    function clearProgress() { uploadProgress.className = "upload-progress"; }
 
-    function hideUploadProgress() {
-      uploadProgress.className = "upload-progress";
-    }
-
-    function openUploadModal() {
-      uploadModalOverlay.hidden = false;
-      document.body.style.overflow = "hidden";
-    }
-
-    function closeUploadModal() {
-      uploadModalOverlay.hidden = true;
-      document.body.style.overflow = "";
-    }
+    function openUploadModal() { uploadModalOverlay.hidden = false; document.body.style.overflow = "hidden"; }
+    function closeUploadModal() { uploadModalOverlay.hidden = true; document.body.style.overflow = ""; }
 
     document.getElementById("openUploadModal").addEventListener("click", openUploadModal);
     document.getElementById("closeUploadModal").addEventListener("click", closeUploadModal);
     uploadModalOverlay.addEventListener("click", (e) => { if (e.target === uploadModalOverlay) closeUploadModal(); });
     document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !uploadModalOverlay.hidden) closeUploadModal(); });
 
-    function onFileChosen(file) {
-      if (!file || file.type !== "application/pdf") {
-        showUploadProgress("Please choose a valid PDF file.", "error");
-        return;
+    function fileToBookTitle(file) {
+      return file.name.replace(/\.pdf$/i, "").replace(/[-_]+/g, " ").replace(/^\d+\s*/, "").trim() || file.name;
+    }
+
+    function addFilesToQueue(files) {
+      const pdfs = Array.from(files).filter((f) => f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf"));
+      if (!pdfs.length) { showProgress("No valid PDF files selected.", "error"); return; }
+      for (const f of pdfs) {
+        if (!batchQueue.find((e) => e.file.name === f.name && e.file.size === f.size)) {
+          batchQueue.push({ file: f, bookTitle: fileToBookTitle(f), sourceId: "", chapters: [], status: "pending", error: "" });
+        }
       }
-      currentPdfFile = file;
-      currentSourceId = "";
-      extractedChapters = [];
+      pdfFileName.textContent = batchQueue.length === 1 ? batchQueue[0].file.name : `${batchQueue.length} files queued`;
+      clearProgress();
+      renderBatchQueue();
+      batchQueueSection.hidden = false;
+      uploadStepBtns.hidden = false;
       chapterExtractList.hidden = true;
       uploadModalActions.hidden = true;
-      hideUploadProgress();
+    }
 
-      pdfFileName.textContent = file.name;
-      if (!pdfBookTitle.value) {
-        pdfBookTitle.value = file.name.replace(/\.pdf$/i, "").replace(/[-_]+/g, " ").replace(/^\d+\s*/, "").trim();
+    function statusIcon(status) {
+      return { pending: "⏳", extracting: "🔍", uploading: "⬆️", done: "✅", error: "❌" }[status] || "⏳";
+    }
+
+    function renderBatchQueue() {
+      batchQueueCount.textContent = `${batchQueue.length} file${batchQueue.length !== 1 ? "s" : ""}`;
+      batchQueueList.innerHTML = batchQueue.map((entry, i) => `
+        <div class="chapter-extract-item" style="justify-content:space-between;gap:8px;">
+          <div style="flex:1;min-width:0;">
+            <div class="chapter-extract-name" style="display:flex;align-items:center;gap:6px;">
+              <span>${statusIcon(entry.status)}</span>
+              <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(entry.bookTitle)}</span>
+            </div>
+            <div class="chapter-extract-theme">
+              ${entry.status === "done"
+                ? `Source: ${escapeHtml(entry.sourceId)} · ${entry.chapters.length} chapter${entry.chapters.length !== 1 ? "s" : ""}`
+                : entry.status === "error"
+                  ? escapeHtml(entry.error)
+                  : escapeHtml(entry.file.name) + " · " + (entry.file.size / 1024 / 1024).toFixed(1) + " MB"}
+            </div>
+          </div>
+          <button class="tiny" type="button" data-remove-idx="${i}" style="flex-shrink:0;padding:4px 10px;font-size:0.78rem;" ${entry.status === "uploading" ? "disabled" : ""}>✕</button>
+        </div>
+      `).join("");
+      for (const btn of batchQueueList.querySelectorAll("[data-remove-idx]")) {
+        btn.addEventListener("click", () => {
+          const idx = parseInt(btn.getAttribute("data-remove-idx"), 10);
+          batchQueue.splice(idx, 1);
+          if (!batchQueue.length) { batchQueueSection.hidden = true; uploadStepBtns.hidden = true; pdfFileName.textContent = ""; }
+          renderBatchQueue();
+        });
       }
-      extractOutlineBtn.disabled = false;
-      uploadToChatpdfBtn.disabled = false;
     }
 
     pdfDropZone.addEventListener("click", () => pdfFileInput.click());
     pdfDropZone.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") pdfFileInput.click(); });
-    pdfFileInput.addEventListener("change", () => { if (pdfFileInput.files[0]) onFileChosen(pdfFileInput.files[0]); });
-
+    pdfFileInput.addEventListener("change", () => { if (pdfFileInput.files.length) addFilesToQueue(pdfFileInput.files); pdfFileInput.value = ""; });
     pdfDropZone.addEventListener("dragover", (e) => { e.preventDefault(); pdfDropZone.classList.add("drag-over"); });
     pdfDropZone.addEventListener("dragleave", () => pdfDropZone.classList.remove("drag-over"));
     pdfDropZone.addEventListener("drop", (e) => {
       e.preventDefault();
       pdfDropZone.classList.remove("drag-over");
-      const file = e.dataTransfer.files[0];
-      if (file) onFileChosen(file);
+      if (e.dataTransfer.files.length) addFilesToQueue(e.dataTransfer.files);
     });
 
-    extractOutlineBtn.addEventListener("click", async () => {
-      if (!currentPdfFile) return;
-      extractOutlineBtn.disabled = true;
-      extractOutlineBtn.textContent = "Extracting…";
-      showUploadProgress("Reading PDF outline…");
-
-      try {
-        const titles = await extractPdfOutline(currentPdfFile);
-        if (!titles.length) {
-          showUploadProgress("No chapter outline found in this PDF. You can still upload to ChatPDF and chat with it directly.", "");
-          extractedChapters = [];
-          chapterExtractList.hidden = true;
-          uploadModalActions.hidden = true;
-        } else {
-          extractedChapters = titles.map((t) => {
-            const theme = inferThemePdf(t);
-            const weakness = inferWeaknessPdf(t, theme);
-            return { title: t, theme, weakness, selected: true };
-          });
-          renderChapterList();
-          showUploadProgress(`Found ${titles.length} chapter${titles.length !== 1 ? "s" : ""} in the outline.`, "success");
+    document.getElementById("extractAllOutlinesBtn").addEventListener("click", async () => {
+      const btn = document.getElementById("extractAllOutlinesBtn");
+      btn.disabled = true;
+      btn.textContent = "Extracting…";
+      for (let i = 0; i < batchQueue.length; i++) {
+        const entry = batchQueue[i];
+        if (entry.status === "done") continue;
+        entry.status = "extracting";
+        renderBatchQueue();
+        try {
+          const titles = await extractPdfOutline(entry.file);
+          entry.chapters = titles.map((t) => { const theme = inferThemePdf(t); return { title: t, theme, weakness: inferWeaknessPdf(t, theme), selected: true }; });
+          entry.status = "pending";
+        } catch (err) {
+          entry.status = "pending";
+          entry.chapters = [];
         }
-      } catch (err) {
-        showUploadProgress("Could not read PDF outline: " + (err.message || "unknown error"), "error");
-      } finally {
-        extractOutlineBtn.disabled = false;
-        extractOutlineBtn.textContent = "Extract Chapters from Outline";
+        renderBatchQueue();
       }
+      const total = batchQueue.reduce((n, e) => n + e.chapters.length, 0);
+      showProgress(`Outlines extracted. Found ${total} chapter${total !== 1 ? "s" : ""} across ${batchQueue.length} file${batchQueue.length !== 1 ? "s" : ""}.`, "success");
+      btn.disabled = false;
+      btn.textContent = "Extract All Outlines";
     });
 
-    uploadToChatpdfBtn.addEventListener("click", async () => {
-      if (!currentPdfFile) return;
-      const key = getChatPdfKey();
-      if (!key) {
-        showUploadProgress("No ChatPDF API key saved. Enter and save your key in the sidebar first.", "error");
-        return;
-      }
-      uploadToChatpdfBtn.disabled = true;
-      uploadToChatpdfBtn.textContent = "Uploading…";
-      showUploadProgress("Uploading PDF to ChatPDF — this may take a moment for large files…");
+    document.getElementById("uploadAllBtn").addEventListener("click", async () => {
+      const btn = document.getElementById("uploadAllBtn");
+      btn.disabled = true;
+      btn.textContent = "Uploading…";
+      document.getElementById("extractAllOutlinesBtn").disabled = true;
+      let successCount = 0;
+      let errorCount = 0;
 
-      try {
-        currentSourceId = await uploadFileToChatPdf(currentPdfFile);
-        showUploadProgress("Uploaded successfully! Source ID: " + currentSourceId, "success");
-        if (extractedChapters.length || chapterExtractList.hidden) {
-          uploadModalActions.hidden = false;
+      for (let i = 0; i < batchQueue.length; i++) {
+        const entry = batchQueue[i];
+        if (entry.status === "done") { successCount++; continue; }
+        entry.status = "uploading";
+        renderBatchQueue();
+        showProgress(`Uploading ${i + 1} of ${batchQueue.length}: ${entry.bookTitle}…`);
+        try {
+          const formData = new FormData();
+          formData.append("file", entry.file);
+          const response = await fetch("/api/chatpdf/upload", { method: "POST", body: formData });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(data.error || "Upload failed");
+          entry.sourceId = data.sourceId;
+          if (!entry.chapters.length) {
+            try { const titles = await extractPdfOutline(entry.file); entry.chapters = titles.map((t) => { const theme = inferThemePdf(t); return { title: t, theme, weakness: inferWeaknessPdf(t, theme), selected: true }; }); } catch {}
+          }
+          entry.status = "done";
+          successCount++;
+        } catch (err) {
+          entry.error = err.message || "Upload failed";
+          entry.status = "error";
+          errorCount++;
         }
-      } catch (err) {
-        showUploadProgress("Upload failed: " + (err.message || "unknown error"), "error");
-        currentSourceId = "";
-      } finally {
-        uploadToChatpdfBtn.disabled = false;
-        uploadToChatpdfBtn.textContent = "Upload to ChatPDF";
+        renderBatchQueue();
+      }
+
+      btn.disabled = false;
+      btn.textContent = "Upload All to ChatPDF";
+      document.getElementById("extractAllOutlinesBtn").disabled = false;
+
+      if (successCount > 0) {
+        showProgress(`${successCount} file${successCount !== 1 ? "s" : ""} uploaded successfully${errorCount ? `, ${errorCount} failed` : ""}.`, errorCount ? "" : "success");
+        allExtractedChapters = [];
+        for (const entry of batchQueue.filter((e) => e.status === "done")) {
+          const chaps = entry.chapters.length
+            ? entry.chapters
+            : [{ title: "Whole Book", theme: "Full book access via ChatPDF.", weakness: "General chess improvement.", selected: true }];
+          for (const ch of chaps) allExtractedChapters.push({ ...ch, bookTitle: entry.bookTitle, sourceId: entry.sourceId });
+        }
+        renderAllChapters();
+        uploadModalActions.hidden = false;
+      } else {
+        showProgress("All uploads failed. Check the server logs.", "error");
       }
     });
 
-    function renderChapterList() {
-      if (!extractedChapters.length) { chapterExtractList.hidden = true; uploadModalActions.hidden = true; return; }
-      chapterExtractList.innerHTML = extractedChapters.map((ch, i) => `
+    function renderAllChapters() {
+      if (!allExtractedChapters.length) { chapterExtractList.hidden = true; return; }
+      chapterExtractList.innerHTML = allExtractedChapters.map((ch, i) => `
         <div class="chapter-extract-item" data-idx="${i}">
-          <input type="checkbox" id="ch_${i}" ${ch.selected ? "checked" : ""} data-chapter-idx="${i}">
+          <input type="checkbox" ${ch.selected ? "checked" : ""} data-chapter-idx="${i}">
           <div>
-            <div class="chapter-extract-name">${escapeHtml(ch.title)}</div>
+            <div class="chapter-extract-name">${escapeHtml(ch.bookTitle)} › ${escapeHtml(ch.title)}</div>
             <div class="chapter-extract-theme">${escapeHtml(ch.theme)}</div>
           </div>
         </div>
       `).join("");
       chapterExtractList.hidden = false;
-      uploadModalActions.hidden = false;
-
       for (const cb of chapterExtractList.querySelectorAll("input[type=checkbox]")) {
-        cb.addEventListener("change", () => {
-          const idx = parseInt(cb.getAttribute("data-chapter-idx"), 10);
-          extractedChapters[idx].selected = cb.checked;
-        });
+        cb.addEventListener("change", () => { allExtractedChapters[parseInt(cb.getAttribute("data-chapter-idx"), 10)].selected = cb.checked; });
       }
       for (const item of chapterExtractList.querySelectorAll(".chapter-extract-item")) {
         item.addEventListener("click", (e) => {
           if (e.target.tagName === "INPUT") return;
           const cb = item.querySelector("input[type=checkbox]");
           cb.checked = !cb.checked;
-          const idx = parseInt(cb.getAttribute("data-chapter-idx"), 10);
-          extractedChapters[idx].selected = cb.checked;
+          allExtractedChapters[parseInt(cb.getAttribute("data-chapter-idx"), 10)].selected = cb.checked;
         });
       }
     }
 
-    document.getElementById("selectAllChapters").addEventListener("click", () => {
-      extractedChapters.forEach((ch) => ch.selected = true);
-      renderChapterList();
-    });
-    document.getElementById("deselectAllChapters").addEventListener("click", () => {
-      extractedChapters.forEach((ch) => ch.selected = false);
-      renderChapterList();
-    });
+    document.getElementById("selectAllChapters").addEventListener("click", () => { allExtractedChapters.forEach((c) => c.selected = true); renderAllChapters(); });
+    document.getElementById("deselectAllChapters").addEventListener("click", () => { allExtractedChapters.forEach((c) => c.selected = false); renderAllChapters(); });
 
     document.getElementById("addChaptersToCatalog").addEventListener("click", () => {
-      const title = pdfBookTitle.value.trim() || (currentPdfFile ? currentPdfFile.name.replace(/\.pdf$/i, "") : "Uploaded Book");
-      const author = pdfBookAuthor.value.trim() || "Unknown";
       const level = pdfBookLevel.value;
       const skill = pdfBookSkill.value;
-      const bookTheme = `A ${skill.toLowerCase()} book.`;
-      const filePath = currentPdfFile ? currentPdfFile.name : "";
+      const selected = allExtractedChapters.filter((c) => c.selected);
+      if (!selected.length) { showProgress("Select at least one chapter to add.", "error"); return; }
 
-      const selected = extractedChapters.filter((ch) => ch.selected);
-      const toAdd = (selected.length ? selected : [{ title: "Whole Book", theme: "Full book access via ChatPDF.", weakness: "General chess improvement.", selected: true }])
-        .map((ch) => ({
-          title,
-          author,
+      for (const ch of selected) {
+        rows.push({
+          title: ch.bookTitle,
+          author: "Unknown",
           level,
           rating_band: level,
           skill,
-          book_theme: bookTheme,
+          book_theme: `A ${skill.toLowerCase()} book.`,
           chapter: ch.title,
           chapter_theme: ch.theme,
           what_this_chapter_teaches: ch.theme,
           what_weakness_it_solves: ch.weakness,
           folder_path: "",
-          relative_path: filePath,
-          file_path: filePath,
-          chatPdfSourceId: currentSourceId
-        }));
-
-      for (const row of toAdd) rows.push(row);
+          relative_path: ch.bookTitle,
+          file_path: ch.bookTitle,
+          chatPdfSourceId: ch.sourceId
+        });
+      }
       render();
       closeUploadModal();
-
-      if (currentSourceId && toAdd.length > 0) {
-        selectRow(rowKey(toAdd[0]));
-        resultsMeta.textContent = `Added ${toAdd.length} chapter${toAdd.length !== 1 ? "s" : ""} from "${title}" — source linked, ready to chat.`;
-      } else {
-        resultsMeta.textContent = `Added ${toAdd.length} chapter${toAdd.length !== 1 ? "s" : ""} from "${title}".`;
-      }
+      const firstAdded = rows[rows.length - selected.length];
+      if (firstAdded && firstAdded.chatPdfSourceId) selectRow(rowKey(firstAdded));
+      resultsMeta.textContent = `Added ${selected.length} chapter${selected.length !== 1 ? "s" : ""} — select one to start chatting.`;
     });
   </script>
 </body>
