@@ -321,6 +321,76 @@
       margin-top: 12px;
     }
 
+
+    .chapter-chat-panel {
+      background: linear-gradient(145deg, #fffaf1 0%, #f7eadb 100%);
+      box-shadow: 0 24px 60px rgba(75, 42, 22, 0.14);
+    }
+
+    .chat-header, .chat-layout, .context-controls, .chat-actions, .export-actions {
+      display: flex;
+      gap: 14px;
+    }
+
+    .chat-header {
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .chat-title {
+      margin: 0 0 6px;
+      color: var(--accent-deep);
+      font-size: 1.8rem;
+      letter-spacing: -0.02em;
+    }
+
+    .chat-subtitle, .empty-chat-state {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .chat-layout { align-items: stretch; }
+    .selected-chapter-card {
+      flex: 0 0 280px;
+      border: 1px solid rgba(139, 93, 55, 0.16);
+      border-radius: 18px;
+      padding: 16px;
+      background: rgba(255, 253, 248, 0.9);
+      box-shadow: 0 14px 32px rgba(84, 49, 23, 0.07);
+    }
+
+    .chapter-detail { margin-bottom: 12px; }
+    .chapter-detail span { display: block; color: var(--muted); font-size: 0.74rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+    .chapter-detail strong { display: block; color: var(--accent-deep); line-height: 1.35; }
+    .chat-workspace { flex: 1; min-width: 0; display: grid; gap: 14px; }
+    .context-card, .chat-card, .export-card {
+      border: 1px solid rgba(139, 93, 55, 0.14);
+      border-radius: 18px;
+      background: rgba(255, 252, 246, 0.92);
+      padding: 14px;
+      box-shadow: 0 12px 28px rgba(84, 49, 23, 0.06);
+    }
+    .context-controls { flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+    .check-control { display: inline-flex; align-items: center; gap: 8px; color: var(--accent-deep); background: #f7eadc; border-radius: 999px; padding: 8px 12px; }
+    .context-fields { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 12px; }
+    .context-input, .question-input { width: 100%; border: 1px solid var(--line); border-radius: 14px; background: #fffdf9; color: var(--ink); padding: 12px; font: 0.95rem/1.45 Georgia, "Times New Roman", serif; resize: vertical; }
+    .fen-input { min-height: 74px; } .pgn-input { min-height: 112px; }
+    .chat-history { min-height: 300px; max-height: 480px; overflow-y: auto; border-radius: 16px; padding: 16px; background: linear-gradient(180deg, #2a211c, #1b1714); border: 1px solid rgba(255,255,255,0.08); }
+    .chat-placeholder { color: rgba(255, 250, 242, 0.72); text-align: center; padding: 74px 18px; }
+    .chat-message { max-width: 82%; margin-bottom: 12px; padding: 13px 15px; border-radius: 18px; box-shadow: 0 10px 24px rgba(0,0,0,0.12); white-space: pre-wrap; line-height: 1.5; }
+    .chat-message.user { margin-left: auto; background: linear-gradient(135deg, #b77a33, #8e4b22); color: #fff8ef; border-bottom-right-radius: 6px; }
+    .chat-message.assistant { margin-right: auto; background: #fffaf1; color: var(--ink); border-bottom-left-radius: 6px; }
+    .chat-message.system { max-width: 100%; margin: 0 auto 12px; background: #f8e8da; color: #7c2f1d; }
+    .chat-composer { margin-top: 12px; }
+    .question-input { min-height: 88px; }
+    .chat-actions { justify-content: flex-end; margin-top: 10px; }
+    .ask-button { background: linear-gradient(135deg, #b9873d, #8e4b22); box-shadow: 0 10px 22px rgba(142,75,34,0.22); }
+    button:disabled { opacity: 0.62; cursor: not-allowed; transform: none; }
+    .export-output { min-height: 120px; margin: 8px 0 12px; }
+    @media (max-width: 1100px) { .chat-layout { flex-direction: column; } .selected-chapter-card { flex-basis: auto; } }
+    @media (max-width: 700px) { .context-fields { grid-template-columns: 1fr; } .chat-message { max-width: 94%; } }
     .row-actions {
       min-width: 180px;
     }
@@ -717,51 +787,74 @@
           <h2>Catalog Rows</h2>
           <div class="meta" id="resultsMeta"></div>
         </div>
-        <section class="studio" aria-label="Extraction Studio">
-          <div class="studio-grid">
-            <div class="studio-card">
-              <span class="studio-kicker">Selected Chapter</span>
-              <h3 class="studio-title" id="studioTitle">Choose a chapter row</h3>
-              <p class="studio-meta" id="studioMeta">Use the action buttons in the table to load a chapter into the extraction workspace.</p>
-              <div class="studio-fields">
-                <div class="field">
-                  <label for="extractMode">Extraction Type</label>
-                  <select id="extractMode">
-                    <option value="fen">FEN only</option>
-                    <option value="pgn">PGN only</option>
-                    <option value="both">FEN and PGN</option>
-                  </select>
-                </div>
-                <div class="field">
-                  <label for="extractDepth">Output Depth</label>
-                  <select id="extractDepth">
-                    <option value="chapter">Selected chapter only</option>
-                    <option value="strict">Strict chapter diagrams only</option>
-                    <option value="annotated">Include annotations if present</option>
-                  </select>
-                </div>
-              </div>
-              <div class="studio-quick-actions">
-                <button class="ghost" id="modeFen" type="button">Use FEN</button>
-                <button class="ghost" id="modePgn" type="button">Use PGN</button>
-                <button class="ghost" id="modeBoth" type="button">Use Both</button>
-              </div>
-              <p class="studio-note">This panel builds chapter extraction output around the selected source PDF and chapter.</p>
-              <p class="studio-note"><strong>Tip:</strong> click anywhere on a row below to load that chapter here. The selected row stays highlighted.</p>
-              <div class="studio-warning"><strong>Safe extraction:</strong> the page can now ask the local extractor service for <code>Games + FEN JSON</code> and <code>FENs as PGN</code>. If it is not running yet, start <code>C:\Chess books\start_chapter_extractor.bat</code> once, then try again.</div>
+        <section class="studio chapter-chat-panel" aria-label="Chapter Chat">
+          <div class="chat-header">
+            <div>
+              <span class="studio-kicker">Premium Analysis</span>
+              <h2 class="chat-title">Chapter Chat</h2>
+              <p class="chat-subtitle">Ask ChatPDF using the selected chapter, PGN, and FEN.</p>
             </div>
-            <div class="studio-card">
-              <span class="studio-kicker">Extraction Workspace</span>
-              <textarea id="markdownOutput" class="studio-output" spellcheck="false"></textarea>
-              <div class="actions">
-                <button class="ghost" id="copyMarkdown" type="button">Copy Markdown</button>
-                <button class="ghost" id="downloadGamesFens" type="button">Download Games + FEN JSON</button>
-                <button class="ghost" id="downloadFenPgn" type="button">Download FENs as PGN</button>
-                <button class="ghost" id="downloadFen" type="button">Download FEN Request</button>
-                <button class="primary" id="downloadMarkdown" type="button">Download Request</button>
-              </div>
+            <span class="status-chip" id="chatStatusBadge">Select chapter</span>
+          </div>
+
+          <div class="chat-layout">
+            <aside class="selected-chapter-card" id="selectedChapterCard">
+              <p class="empty-chat-state">Select a catalog row to start chatting with that chapter.</p>
+            </aside>
+
+            <div class="chat-workspace">
+              <section class="context-card" aria-label="Chapter context controls">
+                <div class="context-controls">
+                  <label class="check-control"><input id="includeFen" type="checkbox"> Include FEN</label>
+                  <label class="check-control"><input id="includePgn" type="checkbox"> Include PGN</label>
+                  <button class="ghost" id="pasteFen" type="button">Paste FEN</button>
+                  <button class="ghost" id="pastePgn" type="button">Paste PGN</button>
+                  <button class="ghost" id="pasteBoth" type="button">Paste Both</button>
+                  <button class="ghost" id="clearContext" type="button">Clear Context</button>
+                </div>
+                <div class="context-fields">
+                  <div class="field">
+                    <label for="fenContext">FEN</label>
+                    <textarea id="fenContext" class="context-input fen-input" placeholder="Paste a FEN position here..."></textarea>
+                  </div>
+                  <div class="field">
+                    <label for="pgnContext">PGN</label>
+                    <textarea id="pgnContext" class="context-input pgn-input" placeholder="Paste PGN game or variation here..."></textarea>
+                  </div>
+                </div>
+              </section>
+
+              <section class="chat-card" aria-label="Chat history">
+                <div class="chat-history" id="chatHistory">
+                  <div class="chat-placeholder">Select a chapter, add optional FEN/PGN context, then ask a question.</div>
+                </div>
+                <div class="chat-composer">
+                  <textarea id="chapterQuestion" class="question-input" placeholder="Ask about this chapter, position, or game…"></textarea>
+                  <div class="chat-actions">
+                    <button class="ghost" id="newChat" type="button">New chat</button>
+                    <button class="primary ask-button" id="askChapter" type="button">Ask Chapter</button>
+                  </div>
+                </div>
+              </section>
+
+              <section class="export-card" aria-label="Export actions">
+                <div>
+                  <span class="studio-kicker">Export</span>
+                  <p class="studio-note">Legacy extraction and download actions remain available for the selected chapter.</p>
+                </div>
+                <textarea id="markdownOutput" class="studio-output export-output" spellcheck="false" aria-label="Markdown extraction request"></textarea>
+                <div class="actions export-actions">
+                  <button class="ghost" id="copyMarkdown" type="button">Copy Markdown</button>
+                  <button class="ghost" id="downloadGamesFens" type="button">Download Games + FEN JSON</button>
+                  <button class="ghost" id="downloadFenPgn" type="button">Download FENs as PGN</button>
+                  <button class="ghost" id="downloadFen" type="button">Download FEN Request</button>
+                  <button class="primary" id="downloadMarkdown" type="button">Download Request</button>
+                </div>
+              </section>
             </div>
           </div>
+          <select id="extractMode" hidden><option value="fen">FEN only</option><option value="pgn">PGN only</option><option value="both">FEN and PGN</option></select>
+          <select id="extractDepth" hidden><option value="chapter">Selected chapter only</option><option value="strict">Strict chapter diagrams only</option><option value="annotated">Include annotations if present</option></select>
         </section>
         <div class="table-shell">
           <p class="table-scroll-hint">Scroll left or right to see all chapter columns and the action buttons.</p>
@@ -802,14 +895,26 @@
     const extractMode = document.getElementById("extractMode");
     const extractDepth = document.getElementById("extractDepth");
     const markdownOutput = document.getElementById("markdownOutput");
-    const studioTitle = document.getElementById("studioTitle");
-    const studioMeta = document.getElementById("studioMeta");
+    const selectedChapterCard = document.getElementById("selectedChapterCard");
+    const chatStatusBadge = document.getElementById("chatStatusBadge");
+    const includeFenCheckbox = document.getElementById("includeFen");
+    const includePgnCheckbox = document.getElementById("includePgn");
+    const fenContextInput = document.getElementById("fenContext");
+    const pgnContextInput = document.getElementById("pgnContext");
+    const chatHistory = document.getElementById("chatHistory");
+    const chapterQuestion = document.getElementById("chapterQuestion");
+    const askChapterButton = document.getElementById("askChapter");
     const downloadButton = document.getElementById("downloadMarkdown");
     const downloadGamesFensButton = document.getElementById("downloadGamesFens");
     const downloadFenPgnButton = document.getElementById("downloadFenPgn");
     const downloadFenButton = document.getElementById("downloadFen");
     const filterToggle = document.getElementById("filterToggle");
     let selectedRowKey = "";
+    let selectedChapter = null;
+    let chatMessages = [];
+    let fenContext = "";
+    let pgnContext = "";
+    let chatLoading = false;
 
     const controls = [searchBox, levelFilter, skillFilter, authorFilter, titleFilter, weaknessFilter, outlineFilter];
     for (const control of controls) {
@@ -819,19 +924,14 @@
 
     extractMode.addEventListener("change", updateStudio);
     extractDepth.addEventListener("change", updateStudio);
-
-    document.getElementById("modeFen").addEventListener("click", () => {
-      extractMode.value = "fen";
-      updateStudio();
-    });
-    document.getElementById("modePgn").addEventListener("click", () => {
-      extractMode.value = "pgn";
-      updateStudio();
-    });
-    document.getElementById("modeBoth").addEventListener("click", () => {
-      extractMode.value = "both";
-      updateStudio();
-    });
+    fenContextInput.addEventListener("input", () => { fenContext = fenContextInput.value; });
+    pgnContextInput.addEventListener("input", () => { pgnContext = pgnContextInput.value; });
+    document.getElementById("pasteFen").addEventListener("click", () => pasteContext("fen"));
+    document.getElementById("pastePgn").addEventListener("click", () => pasteContext("pgn"));
+    document.getElementById("pasteBoth").addEventListener("click", () => pasteContext("both"));
+    document.getElementById("clearContext").addEventListener("click", clearContext);
+    document.getElementById("newChat").addEventListener("click", () => { chatMessages = []; renderChatHistory(); });
+    askChapterButton.addEventListener("click", askChapter);
 
     filterToggle.addEventListener("click", () => {
       const collapsed = document.body.classList.toggle("filters-collapsed");
@@ -1134,21 +1234,178 @@
       ].filter((line) => line !== "-").join("\n");
     }
 
+    function normalizeChapter(row) {
+      if (!row) return null;
+      return {
+        ...row,
+        book: row.title,
+        weaknessSolved: row.what_weakness_it_solves,
+        chatPdfSourceId: row.chatPdfSourceId || row.chatpdf_source_id || row.sourceId || row.source_id || "",
+        fen: row.fen || row.FEN || "",
+        pgn: row.pgn || row.PGN || ""
+      };
+    }
+
     function updateStudio() {
       const row = getSelectedRow();
-      if (!row) {
-        studioTitle.textContent = "Choose a chapter row";
-        studioMeta.textContent = "Use the action buttons in the table to load a chapter into the extraction workspace.";
-      } else {
-        studioTitle.textContent = row.title + " - " + row.chapter;
-        studioMeta.textContent = row.author + " | " + row.level + " | " + row.skill;
-      }
+      selectedChapter = normalizeChapter(row);
+      renderSelectedChapter();
+      renderChatHistory();
       markdownOutput.value = buildOutput(row);
       downloadButton.textContent = getExportSpec().label;
     }
 
+    function renderSelectedChapter() {
+      if (!selectedChapter) {
+        chatStatusBadge.textContent = "Select chapter";
+        chatStatusBadge.className = "status-chip";
+        selectedChapterCard.innerHTML = '<p class="empty-chat-state">Select a catalog row to start chatting with that chapter.</p>';
+        return;
+      }
+
+      if (selectedChapter.chatPdfSourceId) {
+        chatStatusBadge.textContent = "ChatPDF connected";
+        chatStatusBadge.className = "status-chip is-live";
+      } else {
+        chatStatusBadge.textContent = "Source missing";
+        chatStatusBadge.className = "status-chip is-offline";
+      }
+
+      selectedChapterCard.innerHTML = [
+        chapterDetail("Book", selectedChapter.book),
+        chapterDetail("Chapter", selectedChapter.chapter),
+        chapterDetail("Author", selectedChapter.author),
+        chapterDetail("Level", selectedChapter.level),
+        chapterDetail("Skill", selectedChapter.skill),
+        chapterDetail("Weakness Solved", selectedChapter.weaknessSolved)
+      ].join("");
+    }
+
+    function chapterDetail(label, value) {
+      return `<div class="chapter-detail"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value || "Not specified")}</strong></div>`;
+    }
+
+    async function pasteContext(kind) {
+      let clipboardText = "";
+      try {
+        clipboardText = await navigator.clipboard.readText();
+      } catch {
+        resultsMeta.textContent = "Clipboard read failed. Paste manually into the FEN or PGN field.";
+        return;
+      }
+      if (kind === "fen" || kind === "both") {
+        fenContext = clipboardText;
+        fenContextInput.value = clipboardText;
+        includeFenCheckbox.checked = true;
+      }
+      if (kind === "pgn" || kind === "both") {
+        pgnContext = clipboardText;
+        pgnContextInput.value = clipboardText;
+        includePgnCheckbox.checked = true;
+      }
+    }
+
+    function clearContext() {
+      fenContext = "";
+      pgnContext = "";
+      fenContextInput.value = "";
+      pgnContextInput.value = "";
+      includeFenCheckbox.checked = false;
+      includePgnCheckbox.checked = false;
+    }
+
+    function loadRowContext(row) {
+      fenContext = row?.fen || row?.FEN || "";
+      pgnContext = row?.pgn || row?.PGN || "";
+      fenContextInput.value = fenContext;
+      pgnContextInput.value = pgnContext;
+      includeFenCheckbox.checked = Boolean(fenContext);
+      includePgnCheckbox.checked = Boolean(pgnContext);
+    }
+
+    function renderChatHistory(extraLoading = false) {
+      if (!chatMessages.length && !extraLoading) {
+        chatHistory.innerHTML = '<div class="chat-placeholder">Select a chapter, add optional FEN/PGN context, then ask a question.</div>';
+        return;
+      }
+      chatHistory.innerHTML = chatMessages.map((message) => (
+        `<div class="chat-message ${escapeHtml(message.role)}">${escapeHtml(message.content)}</div>`
+      )).join("") + (extraLoading ? '<div class="chat-message assistant">Thinking with ChatPDF…</div>' : "");
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
+    async function askChapter() {
+      const questionText = chapterQuestion.value.trim();
+      if (!selectedChapter) {
+        resultsMeta.textContent = "Select a chapter row first.";
+        renderSystemMessage("Select a catalog row before asking ChatPDF.");
+        return;
+      }
+      if (!questionText) {
+        resultsMeta.textContent = "Enter a question before asking ChatPDF.";
+        return;
+      }
+      if (!selectedChapter.chatPdfSourceId) {
+        renderSystemMessage("Source missing: this chapter does not include a ChatPDF sourceId. The backend can still resolve one if a server-side book mapping exists.");
+      }
+
+      chatMessages.push({ role: "user", content: questionText });
+      chapterQuestion.value = "";
+      chatLoading = true;
+      askChapterButton.disabled = true;
+      askChapterButton.textContent = "Asking…";
+      renderChatHistory(true);
+
+      const payload = {
+        sourceId: selectedChapter.chatPdfSourceId,
+        book: selectedChapter.book,
+        chapter: selectedChapter.chapter,
+        author: selectedChapter.author,
+        level: selectedChapter.level,
+        skill: selectedChapter.skill,
+        weaknessSolved: selectedChapter.weaknessSolved,
+        question: questionText,
+        fen: fenContextInput.value,
+        pgn: pgnContextInput.value,
+        includeFen: includeFenCheckbox.checked,
+        includePgn: includePgnCheckbox.checked,
+        messages: chatMessages
+      };
+
+      try {
+        const response = await fetch("/api/chatpdf/chapter-chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "ChatPDF request failed.");
+        if (data.sourceId && !selectedChapter.chatPdfSourceId) {
+          selectedChapter.chatPdfSourceId = data.sourceId;
+          renderSelectedChapter();
+        }
+        chatMessages.push({ role: "assistant", content: data.answer || "ChatPDF returned an empty answer." });
+        resultsMeta.textContent = "ChatPDF answer received.";
+      } catch (error) {
+        chatMessages.push({ role: "assistant", content: (error && error.message) ? error.message : "ChatPDF request failed." });
+        resultsMeta.textContent = "ChatPDF request failed.";
+      } finally {
+        chatLoading = false;
+        askChapterButton.disabled = false;
+        askChapterButton.textContent = "Ask Chapter";
+        renderChatHistory();
+      }
+    }
+
+    function renderSystemMessage(text) {
+      chatMessages.push({ role: "system", content: text });
+      renderChatHistory();
+    }
+
     function selectRow(key) {
       selectedRowKey = key;
+      chatMessages = [];
+      loadRowContext(getSelectedRow());
       updateStudio();
       render();
     }
@@ -1247,6 +1504,8 @@
       for (const button of resultsBody.querySelectorAll("[data-mode-row]")) {
         button.addEventListener("click", () => {
           selectedRowKey = button.getAttribute("data-mode-row");
+          chatMessages = [];
+          loadRowContext(getSelectedRow());
           extractMode.value = button.getAttribute("data-mode");
           updateStudio();
           render();

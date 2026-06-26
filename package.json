@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "start": "node server/index.js",
+    "test": "node --check server/index.js && node --check server/chatpdfSources.js"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
