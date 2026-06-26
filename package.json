@@ -3,6 +3,7 @@
     "start": "node server/index.js",
     "test": "node --check server/index.js && node --check server/chatpdfSources.js"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1075.0"
+  }
 }
