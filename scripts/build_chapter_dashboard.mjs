@@ -459,6 +459,13 @@ const html = `<!doctype html>
     .context-fields { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 12px; }
     .context-input, .question-input { width: 100%; border: 1px solid var(--line); border-radius: 14px; background: #fffdf9; color: var(--ink); padding: 12px; font: 0.95rem/1.45 Georgia, "Times New Roman", serif; resize: vertical; }
     .fen-input { min-height: 74px; } .pgn-input { min-height: 112px; }
+    .context-subgrid { display: grid; gap: 12px; }
+    .context-file-input { width: 100%; border: 1px solid var(--line); border-radius: 14px; background: #fffdf9; color: var(--ink); padding: 10px 12px; font: inherit; }
+    .pgn-trace-card { border: 1px solid rgba(139, 93, 55, 0.14); border-radius: 14px; background: linear-gradient(180deg, rgba(255,253,249,0.96), rgba(248,239,229,0.92)); padding: 12px; }
+    .pgn-trace-card strong { color: var(--accent-deep); }
+    .trace-heading { display: block; color: var(--muted); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+    .trace-summary, .trace-titles { margin: 0; color: var(--muted); line-height: 1.5; }
+    .trace-titles { margin-top: 8px; font-size: 0.92rem; }
     .chat-history { min-height: 300px; max-height: 480px; overflow-y: auto; border-radius: 16px; padding: 16px; background: linear-gradient(180deg, #2a211c, #1b1714); border: 1px solid rgba(255,255,255,0.08); }
     .chat-placeholder { color: rgba(255, 250, 242, 0.72); text-align: center; padding: 74px 18px; }
     .chat-message { max-width: 82%; margin-bottom: 12px; padding: 13px 15px; border-radius: 18px; box-shadow: 0 10px 24px rgba(0,0,0,0.12); white-space: pre-wrap; line-height: 1.5; }
@@ -899,9 +906,20 @@ const html = `<!doctype html>
                     <label for="fenContext">FEN</label>
                     <textarea id="fenContext" class="context-input fen-input" placeholder="Paste a FEN position here..."></textarea>
                   </div>
-                  <div class="field">
+                  <div class="context-subgrid">
+                    <div class="field">
+                      <label for="pgnFileInput">PGN File</label>
+                      <input id="pgnFileInput" class="context-file-input" type="file" accept=".pgn,text/plain">
+                    </div>
+                    <div class="field">
                     <label for="pgnContext">PGN</label>
                     <textarea id="pgnContext" class="context-input pgn-input" placeholder="Paste PGN game or variation here..."></textarea>
+                    </div>
+                    <div class="pgn-trace-card" id="pgnTraceCard">
+                      <span class="trace-heading">PGN Trace</span>
+                      <p class="trace-summary" id="pgnTraceSummary">No PGN loaded yet.</p>
+                      <p class="trace-titles" id="pgnTraceTitles">Upload a PGN file or paste PGN text to see detected titles, game count, and FEN setup positions.</p>
+                    </div>
                   </div>
                 </div>
               </section>
@@ -982,7 +1000,10 @@ const html = `<!doctype html>
     const includeFenCheckbox = document.getElementById("includeFen");
     const includePgnCheckbox = document.getElementById("includePgn");
     const fenContextInput = document.getElementById("fenContext");
+    const pgnFileInput = document.getElementById("pgnFileInput");
     const pgnContextInput = document.getElementById("pgnContext");
+    const pgnTraceSummary = document.getElementById("pgnTraceSummary");
+    const pgnTraceTitles = document.getElementById("pgnTraceTitles");
     const chatHistory = document.getElementById("chatHistory");
     const chapterQuestion = document.getElementById("chapterQuestion");
     const askChapterButton = document.getElementById("askChapter");
@@ -996,6 +1017,7 @@ const html = `<!doctype html>
     let chatMessages = [];
     let fenContext = "";
     let pgnContext = "";
+    let pgnTrace = null;
     let chatLoading = false;
 
     const controls = [searchBox, levelFilter, skillFilter, authorFilter, titleFilter, weaknessFilter, outlineFilter];
@@ -1007,7 +1029,21 @@ const html = `<!doctype html>
     extractMode.addEventListener("change", updateStudio);
     extractDepth.addEventListener("change", updateStudio);
     fenContextInput.addEventListener("input", () => { fenContext = fenContextInput.value; });
-    pgnContextInput.addEventListener("input", () => { pgnContext = pgnContextInput.value; });
+    pgnContextInput.addEventListener("input", () => {
+      pgnContext = pgnContextInput.value;
+      pgnTrace = summarizePgn(pgnContext, pgnFileInput.files?.[0]?.name || "");
+      renderPgnTrace();
+    });
+    pgnFileInput.addEventListener("change", async () => {
+      const file = pgnFileInput.files && pgnFileInput.files[0];
+      if (!file) return;
+      const text = await file.text();
+      pgnContext = text;
+      pgnContextInput.value = text;
+      includePgnCheckbox.checked = true;
+      pgnTrace = summarizePgn(text, file.name);
+      renderPgnTrace();
+    });
     document.getElementById("pasteFen").addEventListener("click", () => pasteContext("fen"));
     document.getElementById("pastePgn").addEventListener("click", () => pasteContext("pgn"));
     document.getElementById("pasteBoth").addEventListener("click", () => pasteContext("both"));
@@ -1384,25 +1420,33 @@ const html = `<!doctype html>
         pgnContext = clipboardText;
         pgnContextInput.value = clipboardText;
         includePgnCheckbox.checked = true;
+        pgnTrace = summarizePgn(clipboardText, "");
+        renderPgnTrace();
       }
     }
 
     function clearContext() {
       fenContext = "";
       pgnContext = "";
+      pgnTrace = null;
       fenContextInput.value = "";
       pgnContextInput.value = "";
+      pgnFileInput.value = "";
       includeFenCheckbox.checked = false;
       includePgnCheckbox.checked = false;
+      renderPgnTrace();
     }
 
     function loadRowContext(row) {
       fenContext = row?.fen || row?.FEN || "";
       pgnContext = row?.pgn || row?.PGN || "";
+      pgnTrace = summarizePgn(pgnContext, "");
       fenContextInput.value = fenContext;
       pgnContextInput.value = pgnContext;
+      pgnFileInput.value = "";
       includeFenCheckbox.checked = Boolean(fenContext);
       includePgnCheckbox.checked = Boolean(pgnContext);
+      renderPgnTrace();
     }
 
     function renderChatHistory(extraLoading = false) {
@@ -1414,6 +1458,63 @@ const html = `<!doctype html>
         '<div class="chat-message ' + escapeHtml(message.role) + '">' + escapeHtml(message.content) + '</div>
       )).join("") + (extraLoading ? '<div class="chat-message assistant">Thinking with ChatPDF…</div>' : "");
       chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
+    function summarizePgn(text, fileName) {
+      const normalized = String(text || "").replace(/\r\n/g, "\n").trim();
+      if (!normalized) {
+        return null;
+      }
+
+      const chunks = normalized.includes("\n[")
+        ? normalized.split(/\n{2,}(?=\[)/g).map((part) => part.trim()).filter(Boolean)
+        : [normalized];
+
+      const titles = [];
+      let setupPositions = 0;
+
+      for (const chunk of chunks) {
+        const eventMatch = chunk.match(/^\[Event\s+"(.*)"\]$/m);
+        const whiteMatch = chunk.match(/^\[White\s+"(.*)"\]$/m);
+        const blackMatch = chunk.match(/^\[Black\s+"(.*)"\]$/m);
+        const fenMatches = chunk.match(/^\[FEN\s+".*"\]$/gm);
+        setupPositions += fenMatches ? fenMatches.length : 0;
+
+        const eventTitle = eventMatch && eventMatch[1] && eventMatch[1] !== "?" ? eventMatch[1] : "";
+        const white = whiteMatch && whiteMatch[1] && whiteMatch[1] !== "?" ? whiteMatch[1] : "";
+        const black = blackMatch && blackMatch[1] && blackMatch[1] !== "?" ? blackMatch[1] : "";
+
+        if (eventTitle) {
+          titles.push(eventTitle);
+        } else if (white || black) {
+          titles.push((white || "White") + " vs " + (black || "Black"));
+        } else if (fileName) {
+          titles.push(fileName);
+        } else {
+          titles.push("Untitled PGN");
+        }
+      }
+
+      return {
+        fileName: fileName || "",
+        games: chunks.length,
+        setupPositions,
+        titles: titles.slice(0, 10)
+      };
+    }
+
+    function renderPgnTrace() {
+      if (!pgnTrace) {
+        pgnTraceSummary.textContent = "No PGN loaded yet.";
+        pgnTraceTitles.textContent = "Upload a PGN file or paste PGN text to see detected titles, game count, and FEN setup positions.";
+        return;
+      }
+
+      const sourceLabel = pgnTrace.fileName ? " from " + pgnTrace.fileName : "";
+      pgnTraceSummary.innerHTML = "<strong>" + pgnTrace.games + "</strong> game(s), <strong>" + pgnTrace.setupPositions + "</strong> setup position(s)" + sourceLabel + ".";
+      pgnTraceTitles.textContent = pgnTrace.titles.length
+        ? "Titles: " + pgnTrace.titles.join(" | ")
+        : "No PGN titles detected.";
     }
 
     async function askChapter() {
